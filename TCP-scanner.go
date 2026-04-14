@@ -3,8 +3,11 @@ package main
 import (
 	"fmt"
 	"net"
+	"sort"
 	"sync"
 )
+
+//var v[]int
 
 func slow_scanning() {
 	for i := 70; i <= 80; i++ {
@@ -50,14 +53,56 @@ func waitGroup_scanning() {
 	wg.Wait()
 }
 
-func waitGroup_2() {
+func worker(ports chan int, results chan int) {
+	for p := range ports {
+		webAddress := fmt.Sprintf("127.0.0.1:%d",p)
+		conn, err := net.Dial("tcp",webAddress)
+		if err != nil {
+			results <- 0
+			continue
+		}
+		conn.Close()
+		results <- p
+	}
+}
+
+func the_best_scaning_one() {
+	ports := make(chan int, 100)
+	results := make(chan int)
+	var openPorts[] int
+	
+	go func(){
+		for i := 1; i <= 65535; i++ {
+			ports <- i
+		}
+	}()
+
+	for i := 0; i < cap(ports); i++ {
+		go worker(ports, results)
+	}
+
+	for i := 0 ; i < 65535; i++{
+		port := <- results
+		if port != 0{
+			openPorts = append(openPorts, port)
+		}
+	}
+	close(ports)
+	close(results)
+	sort.Ints(openPorts)
+	for _, port := range openPorts {
+		fmt.Printf("%d is open\n",port)
+	}
+	/*
+	slices.Sort(v)
+	for i := 0; i < len(v); i++ {
+		fmt.Println(v[i])
+	}
+	*/
 
 }
 
-func Channel_scanning() {
-
-}
 
 func main() {
-	waitGroup_scanning()
+	the_best_scaning_one()
 }
